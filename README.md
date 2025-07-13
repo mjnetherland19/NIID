@@ -49,5 +49,9 @@ The pipeline expects the directory name to also be in the sequence file name acc
 Any number of stages can be run separately with this command:
 ./NIID_pipeline --only \<stage name\>, \<stage name\>, ... \<file\>
 
+\<stage name\> is any keyword from this list: 'assemble' 'checkm' 'quast' 'plasmid' 'profile' 'phylogeny' 'mlst' 'parsnp' 'amr' 'vf' 'prokka'
+
+Some stages can only be run if preceding stages have already occurred. The pipeline will catch any mistakes and inform you of the appropriate stage to run.
+
 
 
