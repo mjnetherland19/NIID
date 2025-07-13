@@ -46,5 +46,8 @@ By default, all stages of the pipeline are turned on. Run the whole workflow wit
 
 The pipeline expects the directory name to also be in the sequence file name according to this format: ${dir}\*1.fast\* ${dir}\*2.fast\*
 
+Any number of stages can be run separately with this command:
+./NIID_pipeline --only \<stage name\>, \<stage name\>, ... \<file\>
+
 
 
