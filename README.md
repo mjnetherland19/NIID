@@ -17,6 +17,7 @@ You will need to set up three conda environments:
 
 conda create -n NIID -c conda-forge -c bioconda -c defaults abricate megahit checkm quast hmmer mlst mash mafft prokka seqtk
 conda create -n parsnp-env -c bioconda parsnp
+
 conda create -n fpdf2 fpdf2 pandas pillow csv
 
 Download the MinHash table from [Zenodo](https://zenodo.org/records/15871983)
