@@ -13,8 +13,11 @@ The pipeline follows this sequence (although each stage can be run independently
 | Taxonomic ID   | Mash                     |
 | 16S Phylogeny  | HMMER - MAFFT - FastTree |
 | MLST           | [tseemann/mlst](https://github.com/tseemann/mlst/tree/master)|
-| Genome profile | ABRicate                 |
-| Annotation     |
+| Genome profile | [ABRicate](https://github.com/tseemann/abricate)|
+| Annotation     | Prokka |
+| SNP Analysis   | Parsnp |
+| Report Generatoin| fpdf2 |
+
 ## Installation
 You will need to set up three conda environments:
 
