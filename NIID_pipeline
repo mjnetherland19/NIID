@@ -1,0 +1,542 @@
+#!/bin/bash
+
+dataframes()
+{
+	if [ ! -d dataframes ]
+	then	
+		mkdir dataframes
+	fi
+	
+	python3 ${SCRIPT_DIR}/scripts/make_dfs.py
+}	
+do_fastqc() {
+	echo "doing fastqc"
+	if [[ ! -f $R1 ]] || [[ ! -f $R2 ]]; then
+		echo "Read FASTQ files don't exist. Skipping fastqc."
+		return
+	fi
+
+	fastqcdir="fastqc_out_$1"
+	cmkdir $fastqcdir
+	fastqc $2 -o $fastqcdir $fastqc_args &>> $logfile
+	fastqc $3 -o $fastqcdir $fastqc_args &>> $logfile
+}
+
+do_bbduk() {
+	echo "doing bbduk"
+	if [[ ! -f $R1 ]] || [[ ! -f $R2 ]]; then
+		echo "Read FASTQ files don't exist. Skipping bbduk."
+		return
+	fi
+
+	#Make sure bbduk.sh in your PATH
+	bbduk.sh in1=$R1 in2=$R2 out1=${line}_R1_trim.fastq.gz out2=${line}_R2_trim.fastq.gz $bbduk_args &>> $logfile
+	
+	#mv ${line}_R1_trim.gz $R1
+	#mv ${line}_R2_trim.gz $R2
+	
+}
+
+do_assemble() {
+
+	if [[ ! -f $R1 ]] || [[ ! -f $R2 ]]; then
+		echo "Read FASTQ files don't exist. Skipping assembly."
+		return
+	fi
+
+	echo doing assembly `date`
+	
+	gunzip $R1
+	gunzip $R2
+
+	R1=$(ls ${line}*1.fast*)
+	R2=$(ls ${line}*2.fast*)
+	
+	megahit -1 $R1 -2 $R2 -o assembly -t 4 > logs/assemble.log 2>&1
+	
+	gzip $R1
+	gzip $R2
+
+	mv assembly/final.contigs.fa ${contigs}
+
+}
+
+
+do_profile()
+{
+	if [[ ! -f ${contigs} ]]; then
+		echo "Assembly doesn't exist. Skipping profiling."
+		return
+	fi
+	echo "doing profile"	
+	mash dist ${contigs} ${SCRIPT_DIR}/data/ncbi_best_prok.msh > mash.out 2>logs/profile.log
+
+	python3 ${SCRIPT_DIR}/scripts/parse_mash.py mash.out 5 genomes 2>>logs/profile.log
+
+	#Prepare Mash results
+	while read top
+	do 
+		second=$(echo $top | cut -d, -f2)
+		name=$(echo $second | rev | cut -d"/" -f1 | rev | cut -d. -f 1-2)
+		if [[ $name == *"GCA"* ]]
+		then
+			res=$(grep "$name" ${SCRIPT_DIR}/data/NCBI_Best_Prokaryote_Genomes.csv | cut -d, -f3)
+			
+			if [[ -z $res ]]
+			then
+				sed -i "/${name}/d" genomes_mash.csv
+			fi
+
+			if [[ $name == *"subsp"* ]]
+			then 
+				taxon=$(echo $res | cut -d" " -f1-4)
+				echo $taxon >> taxa
+				sed -i "s/${second//\//\\/}/${taxon}/g" genomes_mash.csv
+			else 
+				taxon=$(echo $res | cut -d" " -f1-2)
+				echo $taxon >> taxa
+				sed -i "s/${second//\//\\/}/${taxon}/g" genomes_mash.csv
+			fi
+		fi
+
+	done<genomes_mash.csv
+	
+	if [ ! -d genomes ]
+	then
+		echo "downloading top 5 species"	
+		${SCRIPT_DIR}/scripts/download_best_genome.sh taxa genomes 1 ${SCRIPT_DIR} >>logs/profile.log 2>&1
+	fi  
+	
+}
+
+do_extract()
+{
+	type=$1
+	
+	if [[ ! -f ${contigs} ]]; then
+		echo "Assembly doesn't exist. Skipping ${type} extraction and phylogenetics."
+		return
+	fi
+	
+	if [ -d ${type}_out ]
+	then
+		rm -r ${type}_out
+	fi
+	
+	out=${type}_out
+	mkdir $out
+	
+	echo doing ${type} extraction and phylogenetic estimation `date`
+	#${type} extraction for MSA
+	cp ${contigs} ${type}
+
+	${SCRIPT_DIR}/scripts/ssu_extract.sh ${type} ${SCRIPT_DIR} $out > logs/${type}_extract.log 2>&1
+	
+	mafft --auto ${out}/${type}.multifasta > ${out}/${type}.msa 2>>logs/${type}_extract.log
+
+	FastTree -nt ${out}/${type}.msa > ${out}/${type}.tree 2>>logs/${type}_extract.log
+	
+	while read le
+	do
+		root=$(echo $le | cut -d, -f2)
+	done< ${type}_mash.csv
+
+	root=${root// /_}
+	
+	Rscript ${SCRIPT_DIR}/scripts/16S_tree.R ${out}/${type}.tree $root $type $line >>logs/${type}_extract.log 2>&1
+
+	rm ${type}/*.fai 2>/dev/null
+}
+
+do_checkm()
+{
+	echo "doing checkm"
+	if [[ ! -f ${contigs} ]]; then
+		echo "Assembly doesn't exist. Skipping checkm."
+		return
+	fi
+
+	cmkdir checkm_out
+	checkm ${checkm_args} checkm_out/${line} > checkm_out/checkm.out 2>logs/checkm.log
+	check=$(python ${SCRIPT_DIR}/scripts/checkmDF.py checkm_out/checkm.out)
+	contam=$(echo $check | cut -d, -f2)
+	contam=${contam:0:-3}
+	if [ $contam -gt 50 ]
+	then
+		#do_quast
+		dataframes
+		cd $home
+		eval "$(conda shell.bash hook)"
+		conda activate fpdf2
+		python3 ${SCRIPT_DIR}/scripts/make_report.py $line	
+		echo "The assembly has contamination >= 50%"
+		echo "Check the report for specific results"
+		halt=1
+	else
+		halt=0
+	fi
+}
+
+do_quast()
+{
+	echo "doing quast"
+	if [[ ! -f ${contigs} ]]; then
+		echo "Assembly doesn't exist. Skipping quast."
+		return
+	fi
+
+	cmkdir quast_out
+	quast.py ${quast_args} -o quast_out ${contigs} > logs/quast.log 2>&1
+}
+
+do_plasmidfinder()
+{
+	echo "doing plasmidfinder"
+	if [[ ! -f ${contigs} ]]; then
+		echo "Assembly doesn't exist. Skipping plasmidfinder."
+		return
+	fi
+
+	abricate --db plasmidfinder ${contigs} > plasmid.out 2>logs/plasmid.log
+
+}
+
+
+do_mlst()
+{
+	echo "doing mlst"
+	if [[ ! -f ${contigs} ]]; then
+		echo "Assembly doesn't exist. Skipping mlst."
+		return
+	fi
+
+	#target=$1
+	
+	#scheme=$(grep "$target" ${SCRIPT_DIR}/data/scheme_species_map.csv | cut -d_ -f1)
+
+	#Get MLST
+	#if [[ ! -z $mlst ]]
+	#then
+	mlst ${contigs} > mlst.out 2>logs/mlst.log
+	#else
+	#	echo No MLST scheme available for $target
+	#fi
+}
+
+do_orthoani()
+{
+	echo "doing orthoani"
+	java -jar /opt/OAU.jar -fd ${genome_dir} -fmt json -u /opt/usearch11.0.667_i86linux32 > ${out}/usearch_orthoani.json
+	
+	python3 ${SCRIPT_DIR}/scripts/parse_OAU.py usearch_orthoani.json matrix
+		
+	echo $target > target
+}
+
+do_parsnp()
+{	
+	if [[ ! -f ${contigs} ]]; then
+		echo "Assembly doesn't exist. Skipping parsnp."
+		return
+	fi
+
+	num_genomes=$(ls strain_genomes | wc -l)
+
+	if [[ $num_genomes -lt 2 ]]
+	then
+		rm -r strain_genomes
+	fi
+	
+	if [ ! -d strain_genomes ]
+	then
+		tmp=$(cat target)
+		echo "downloading 5 strains of ${tmp}"	
+		${SCRIPT_DIR}/scripts/download_best_genome.sh target strain_genomes 5 ${SCRIPT_DIR} >>logs/strains.log 2>&1
+		
+		for x in strain_genomes/*; do realpath $x >> paths; done
+
+		mash sketch -l paths >logs/strains.log 2>&1
+		
+		rm paths
+		
+		mash dist paths.msh ${contigs} > strains_mash.out 2>logs/strains.log
+		
+		python3 ${SCRIPT_DIR}/scripts/parse_mash.py strains_mash.out 1 "strains" >>logs/profile.log
+	fi
+		
+	echo "doing parsnp"
+
+	python3 ${SCRIPT_DIR}/scripts/parse_mash.py strains_mash.out 1 "strains"
+	sed -n '2p' strains_mash.csv | cut -d, -f1 > reference
+	
+	cp ${contigs} strain_genomes
+	
+	eval "$(conda shell.bash hook)"
+	conda activate parsnp-env
+
+	if [ -d parsnp_out ]
+	then
+		echo "Removing DIR parsnp_out"
+		rm -r parsnp_out
+	fi
+
+	#Make SNP matrix
+	ref=$(cat reference)
+	parsnp -c -r $ref -d strain_genomes -p 1 -o parsnp_out --vcf > logs/parsnp.log 2>&1
+	conda deactivate
+	
+	eval "$(conda shell.bash hook)"
+	conda activate NIID
+	refe=$(echo $ref | rev | cut -d/ -f1 | rev)	
+	root=$(sed -n '6p' strains_mash.csv | cut -d, -f2)
+	root=${root// /_}
+	${SCRIPT_DIR}/scripts/get_parsnp_tree.sh "${SCRIPT_DIR}/scripts" strains_mash.out $line $refe 2>>logs/parsnp.log
+
+	python3 ${SCRIPT_DIR}/scripts/make_snp_matrix_from_vcf.py parsnp_out/parsnp.vcf parsnp_out/${line} parsnp_out/parsnp_names 2>>logs/parsnp.log
+	conda deactivate
+	echo "done with parsnp"
+
+}
+
+do_prokka()
+{
+	echo "doing prokka"
+	if [[ ! -f ${contigs} ]]; then
+		echo "Assembly doesn't exist. Skipping prokka."
+		return
+	fi
+
+	name=$(basename $contigs | rev | cut -d. -f2- | rev)
+
+	#echo "RUNNING COMMAND PROKKA --OUTDIR ${name}_prokka --prefix $name $x $logfile"
+	prokka $prokka_args --outdir prokka_out --prefix $name ${contigs} > logs/prokka.log 2>&1
+}
+
+do_genovi() 
+{
+	echo "doing genovi"
+	if [[ ! -f ${contigs} ]]; then
+		echo "Assembly doesn't exist. Skipping genovi."
+		return
+	fi
+
+	#${SCRIPT_DIR}/scripts/run_genovi.sh *_prokka/*.gbk $logfile $genovi_args
+	genovi -i prokka_out/${line}.gbk
+	
+	path=$(realpath genovi)
+	
+	python3 ${SCRIPT_DIR}/scripts/get_genovi_table.py $path $line ${SCRIPT_DIR}/data
+}
+
+do_nucmer()
+{
+	echo "doing nucmer"
+	
+	ref=$(cat reference)
+	cmkdir nucmer_out
+	cp ${contigs} nucmer_out	
+	sed -i 's/ /:/g' nucmer_out/${line}.fasta	
+	nucmer -p $line $ref nucmer_out/${line}.fasta
+
+	show-tiling -c -p nucmer_out/${line}.fasta ${line}.delta
+	
+}
+
+do_ntjoin()
+{
+	echo "doing ntjoin"
+	
+	reference=$1
+	cmkdir ntjoin_out
+	cp assembly/${prefix}.fasta ntjoin_out
+
+	cd ntjoin_out
+	run_ntjoin ${prefix}.fasta $reference
+	cd ..
+	
+	nt_scff="*.fasta.*.all.scaffolds.fa"
+	
+	#sed -i 's/_length.\+//g' ${line}.fasta		
+	#rm out.k32*
+	
+}
+
+do_ragtag() 
+{
+	if [[ ! -f reference ]]; then
+		echo "No reference file. Run parse_mash.py strains_mash.out 1 > reference"
+		return
+	fi
+	echo "doing ragtag"
+	
+	ref=$(cat reference)
+	cmkdir ragtag_out
+	#cp ${contigs} ragtag_out
+	
+	ragtag.py scaffold -o ragtag_out $ref ${contigs}
+	
+	rag_scff="ragtag_out/ragtag.scaffold.fasta"
+	
+}
+
+do_amr()
+{
+	if [[ ! -f ${contigs} ]]; then
+		echo "Assembly doesn't exist. Skipping AMR."
+		return
+	fi
+	echo "doing AMR"
+	array=('argannot' 'card' 'ncbi')
+	
+	for i in "${array[@]}"
+	do
+		abricate --db $i ${contigs} > ${i}_amr_results.tsv 2>logs/amr.log
+	done	
+
+}
+
+do_vf()
+{
+	if [[ ! -f ${contigs} ]]; then
+		echo "Assembly doesn't exist. Skipping VF."
+		return
+	fi
+	echo "doing VF"
+	abricate --db vfdb ${contigs} > vfdb_results.tsv 2>logs/vf.log
+}
+
+# configuration / arguments are wrong enough to warrant stopping program completely.
+error() {
+	echo $1
+	exit 1
+}
+
+#Check and Make Directory
+cmkdir() {
+	[[ -d $1 ]] || mkdir $1
+}
+
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+
+checkm_args="lineage_wf -r -x fasta assembly"
+quast_args="-t 4"
+prokka_args="--force"
+
+#Functions turned on when NIID_pipeline called with no options/flags
+using_assemble=on
+using_checkm=on
+using_quast=on
+using_profile=on
+using_genome_extract=on
+using_strain_extract=off
+using_plasmid=on
+using_mlst=on
+using_amr=on
+using_vf=on
+using_parsnp=on
+using_prokka=on
+
+#process command flags
+pipeline_parts=('assemble' 'checkm' 'quast' 'plasmid' 'profile' 'genome_extract' 'mlst' 'parsnp' 'strain_extract' 'amr' 'vf' 'prokka')
+
+while test $# -gt 1
+do
+	#'shift' pops one of the arguments off the stack, so that each argument can be evaluated sequentially
+	#By the end of the loop the last argument will be FILES
+	
+	case "$1" in
+	--*)
+		switch_part=${1:2}
+		if [[ " ${pipeline_parts[*]} " =~  " $switch_part " ]]; then
+			eval using_$switch_part="on"
+			shift
+			continue
+		fi
+		;;&
+	--no-*)
+		switch_part=${1:5}
+		if [[ " ${pipeline_parts[*]} " =~  " $switch_part " ]]; then
+			eval using_$switch_part="off"
+			shift
+			continue
+		fi
+		error "Tried to switch off invalid component: $1"
+		;;
+	#Turns everything off
+	--only)
+
+		shift
+		for part in "${pipeline_parts[@]}"; do
+			eval using_$part="off"
+		done
+		;;
+	*)
+		echo $#
+		error "Error parsing. You added an invalid flag (or forgot to put the filename at the end): ${1}"
+		;;
+	esac
+done
+
+fileslist=()
+
+#Read file list into array
+while read fileline; do
+	fileslist+=($fileline)
+done<$1
+
+echo "${fileslist[@]}"
+
+for line in "${fileslist[@]}"; do
+	eval "$(conda shell.bash hook)"
+	conda activate NIID
+	
+	echo "processing line: ${line}"
+	
+	home=$(pwd)
+
+	cd $line
+	
+	contigs="assembly/${line}.fasta"	
+	
+	if [ ! -d logs ]
+	then	
+		mkdir logs
+	fi
+
+	R1=$(ls ${line}*1.fast*)
+	R2=$(ls ${line}*2.fast*)
+
+	[[ $using_assemble = "on" ]] && do_assemble
+	
+	[[ $using_checkm = "on" ]] && do_checkm
+	if [ $halt -eq 1 ]
+	then 
+		continue
+	fi
+	
+	[[ $using_quast = "on" ]] && do_quast
+	[[ $using_profile = "on" ]] && do_profile
+	[[ $using_genome_extract = "on" ]] && do_extract genomes
+	[[ $using_strain_extract = "on" ]] && do_extract strain_genomes
+	[[ $using_plasmid = "on" ]] && do_plasmidfinder
+	[[ $using_mlst = "on" ]] && do_mlst
+	[[ $using_amr = "on" ]] && do_amr
+	[[ $using_vf = "on" ]] && do_vf
+	[[ $using_prokka = "on" ]] && do_prokka
+	[[ $using_parsnp = "on" ]] && do_parsnp
+	
+	#rm reference target taxa paths.msh
+	
+	dataframes
+	
+	cd $home
+	
+	eval "$(conda shell.bash hook)"
+	conda activate fpdf2
+
+	python3 ${SCRIPT_DIR}/scripts/make_report.py $line	
+
+	conda deactivate
+done
+
+echo "finished pipeline"
