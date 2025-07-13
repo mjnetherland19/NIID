@@ -432,7 +432,8 @@ checkm_args="lineage_wf -r -x fasta assembly"
 quast_args="-t 4"
 prokka_args="--force"
 
-#Functions turned on when NIID_pipeline called with no options/flags
+#Functions turned on when NIID_pipeline called with no options/flags.
+#Switch any off to customize your workflow
 using_assemble=on
 using_checkm=on
 using_quast=on
