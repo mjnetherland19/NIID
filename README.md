@@ -7,6 +7,8 @@ The pipeline can only be used with paired reads.
 
 You will find within the NIID_pipeline script that there are many functions, which are not detailed here. The limited functionality was to ensure a minimal number of install steps. If you would like to see some of these functions included, or you have any other feature request, please let me know, and I will implement them.
 
+A more complex Nextflow implementation of this is in the works.
+
 ## Overview
 The pipeline follows this sequence (although each stage can be run independently):
 | Stage        | Tool                       |
