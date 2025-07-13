@@ -3,7 +3,7 @@ Pronounced NEED. This is a database-independent pipeline for bacterial genome as
 
 The pipeline can only be used with paired reads.
 
-'NCBI is a part of the pipeline name because primary taxonomic identification is conducted using a MinHash table of a recent set of 21,258 genomes published by [NCBI](https://ncbiinsights.ncbi.nlm.nih.gov/2025/01/14/updated-bacterial-and-archaeal-reference-genome-collection-2/).
+'NCBI is a part of the pipeline name because primary taxonomic identification is conducted using a MinHash table of a recent set of 21,258 genomes published by [NCBI](https://ncbiinsights.ncbi.nlm.nih.gov/2025/01/14/updated-bacterial-and-archaeal-reference-genome-collection-2/). The primary identification stage is verified with a 16S phylogeny.
 
 You will find within the NIID_pipeline script that there are many functions, which are not detailed here. The limited functionality was to ensure a minimal number of install steps. If you would like to see some of these functions included, or you have any other feature request, please let me know, and I will implement them.
 
