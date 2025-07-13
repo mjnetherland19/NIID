@@ -44,7 +44,7 @@ By default, all stages of the pipeline are turned on. Run the whole workflow wit
 
 \<file\> is a list of directory names, where your sequences data is stored.
 
-The pipeline expects the directory name to also be in the sequence file name according to this format: ${dir}*1.fast* ${dir}*2.fast*
+The pipeline expects the directory name to also be in the sequence file name according to this format: ${dir}\*1.fast\* ${dir}\*2.fast\*
 
 
 
