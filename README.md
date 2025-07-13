@@ -18,6 +18,11 @@ The pipeline follows this sequence (although each stage can be run independently
 | SNP Analysis   | Parsnp |
 | Report Generatoin| fpdf2 |
 
+## Report Example (First page only)
+<img width="763" height="727" alt="image" src="https://github.com/user-attachments/assets/24f135d5-0516-43e1-8a30-6dcdcdb80866" />
+
+
+
 ## Installation
 You will need to set up three conda environments:
 
