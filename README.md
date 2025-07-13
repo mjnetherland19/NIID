@@ -1,7 +1,9 @@
 ## NCBI Isolate ID (NIID pipeline)
-Pronounced NEED. This is a database-independent pipeline for bacterial genome assembly, identification, annotation, phylogenetics, etc. At the end of the pipeline the results are packaged into a PDF report, for easy viewing and sharing. The pipeline can only be used with paired reads.
+Pronounced NEED. This is a database-independent pipeline for bacterial genome assembly, identification, annotation, phylogenetics, etc. At the end of the pipeline the results are packaged into a PDF report, for easy viewing and sharing.
 
-'NCBI is a part of the pipeline name because primary taxonomic identification is conducted using a MinHash table of a recent set of 21,258 genomes published by [NCBI](https://ncbiinsights.ncbi.nlm.nih.gov/2025/01/14/updated-bacterial-and-archaeal-reference-genome-collection-2/)
+The pipeline can only be used with paired reads.
+
+'NCBI is a part of the pipeline name because primary taxonomic identification is conducted using a MinHash table of a recent set of 21,258 genomes published by [NCBI](https://ncbiinsights.ncbi.nlm.nih.gov/2025/01/14/updated-bacterial-and-archaeal-reference-genome-collection-2/).
 
 ## Overview
 The pipeline follows this sequence (although each stage can be run independently):
