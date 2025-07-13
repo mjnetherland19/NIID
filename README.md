@@ -27,7 +27,7 @@ The full report can be found in the repo.
 ## Installation
 You will need to set up three conda environments:
 
-- conda create -n NIID -c conda-forge -c bioconda -c defaults abricate megahit checkm quast hmmer mlst mash mafft prokka seqtk
+- conda create -n NIID -c conda-forge -c bioconda -c defaults abricate megahit checkm quast hmmer mlst mash mafft prokka seqtk entrez-direct
 
 - conda create -n parsnp-env -c bioconda parsnp
 
@@ -46,12 +46,20 @@ By default, all stages of the pipeline are turned on. Run the whole workflow wit
 
 The pipeline expects the directory name to also be in the sequence file name according to this format: ${dir}\*1.fast\* ${dir}\*2.fast\*
 
+---
+
 Any number of stages can be run separately with this command:
 ./NIID_pipeline --only \<stage name\>, \<stage name\>, ... \<file\>
 
 \<stage name\> is any keyword from this list: 'assemble' 'checkm' 'quast' 'plasmid' 'profile' 'phylogeny' 'mlst' 'parsnp' 'amr' 'vf' 'prokka'
 
+---
+
 Some stages can only be run if preceding stages have already occurred. The pipeline will catch any mistakes and inform you of the appropriate stage to run.
 
-
+## Phylogeny
+- The phylogenetic inference is conducted on a 16S multisequence alignment of the top 5 taxa given by Mash.
+- Genomes of these taxa are downloaded using NCBI's Entrez Direct. Type strain genomes are always downloaded preferentially, if they are available
+  - This operation may take a long time if the taxon has many assemblies in NCBI
+- An HMM was constructed from the Stokholm alignment found in [NCBI's ribovore program](https://github.com/ncbi/ribovore) and it is used to extract the 16S region of the 
 
