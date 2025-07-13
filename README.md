@@ -13,7 +13,7 @@ The pipeline follows this sequence (although each stage can be run independently
 | Taxonomic ID   | Mash                     |
 | 16S Phylogeny  | HMMER - MAFFT - FastTree |
 | MLST           | [tseemann/mlst](https://github.com/tseemann/mlst/tree/master)|
-| Genome profile | [ABRicate](https://github.com/tseemann/abricate)\nVFDB|
+| Genome profile | [ABRicate](https://github.com/tseemann/abricate) - Virulence Factor, AMR, Plasmid|
 | Annotation     | Prokka |
 | SNP Analysis   | Parsnp |
 | Report Generatoin| fpdf2 |
