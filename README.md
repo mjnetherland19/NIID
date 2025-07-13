@@ -40,7 +40,7 @@ You will need to set up three conda environments:
 ## Usage
 By default, all stages of the pipeline are turned on. Run the whole workflow with:
 
-"./NIID_pipeline <file>"
+./NIID_pipeline \<file\>
 
 
 
