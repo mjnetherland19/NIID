@@ -61,5 +61,5 @@ Some stages can only be run if preceding stages have already occurred. The pipel
 - The phylogenetic inference is conducted on a 16S multisequence alignment of the top 5 taxa given by Mash.
 - Genomes of these taxa are downloaded using NCBI's Entrez Direct. Type strain genomes are always downloaded preferentially, if they are available
   - This operation may take a long time if the taxon has many assemblies in NCBI
-- An HMM was constructed from the Stokholm alignment found in [NCBI's ribovore program](https://github.com/ncbi/ribovore) and it is used to extract the 16S region of the 
+- An HMM was constructed from the Stokholm alignment found in [NCBI's ribovore program](https://github.com/ncbi/ribovore) and it is used to extract the 16S region of the downloaded genomes for multi-sequence alignment and subsequenct phylogenetic construction.
 
