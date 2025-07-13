@@ -37,11 +37,10 @@ You will need to set up three conda environments:
 
 - Finally, clone this repo
 
-##Usage
+## Usage
 By default, all stages of the pipeline are turned on. Run the whole workflow with:
-./NIID_pipeline <file>
 
-<file> is 
+"./NIID_pipeline <file>"
 
 
 
