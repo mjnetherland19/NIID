@@ -24,6 +24,8 @@ The pipeline follows this sequence (although each stage can be run independently
 | SNP Analysis   | Parsnp |
 | Report Generatoin| fpdf2 |
 
+At the Quality check stage the pipeline will halt if the contamination of the genome assembly is above >=50%. Binning has not yet been implemented.
+
 ## Report Example (First page only)
 The full report can be found in the repo.
 <img width="763" height="727" alt="image" src="https://github.com/user-attachments/assets/24f135d5-0516-43e1-8a30-6dcdcdb80866" />
