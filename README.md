@@ -19,6 +19,7 @@ The pipeline follows this sequence (although each stage can be run independently
 | Report Generatoin| fpdf2 |
 
 ## Report Example (First page only)
+The full report can be found in the repo.
 <img width="763" height="727" alt="image" src="https://github.com/user-attachments/assets/24f135d5-0516-43e1-8a30-6dcdcdb80866" />
 
 
@@ -26,15 +27,21 @@ The pipeline follows this sequence (although each stage can be run independently
 ## Installation
 You will need to set up three conda environments:
 
-conda create -n NIID -c conda-forge -c bioconda -c defaults abricate megahit checkm quast hmmer mlst mash mafft prokka seqtk
+- conda create -n NIID -c conda-forge -c bioconda -c defaults abricate megahit checkm quast hmmer mlst mash mafft prokka seqtk
 
-conda create -n parsnp-env -c bioconda parsnp
+- conda create -n parsnp-env -c bioconda parsnp
 
-conda create -n fpdf2 fpdf2 pandas pillow csv
+- conda create -n fpdf2 fpdf2 pandas pillow csv
 
-Download the MinHash table from [Zenodo](https://zenodo.org/records/15871983)
+- Download the MinHash table from [Zenodo](https://zenodo.org/records/15871983)
 
-Finally, clone this repo
+- Finally, clone this repo
+
+##Usage
+By default, all stages of the pipeline are turned on. Run the whole workflow with:
+./NIID_pipeline <file>
+
+<file> is 
 
 
 
