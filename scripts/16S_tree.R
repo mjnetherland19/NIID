@@ -3,9 +3,8 @@ args = commandArgs(trailingOnly=TRUE)
 
 tree=ape::read.tree(file=args[1])
 tr=root(tree,args[2], resolve.root=T)
-
 line=args[4]
-tree=ape::read.tree(file=args[1])
+
 df=as.data.frame(cophenetic(tree))
 df=df[order(df[[line]]),]
 df = subset(df, select = c(args[2]))
